@@ -1,0 +1,10 @@
+.card-image {
+  position: relative;
+  top: 0;
+  transition: top ease 0.5s;
+}
+
+.card-image:hover {
+  cursor: pointer;
+  top: -10px;
+}/*# sourceMappingURL=card.css.map */

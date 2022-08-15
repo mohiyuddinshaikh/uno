@@ -1,0 +1,149 @@
+button {
+  cursor: pointer;
+}
+
+.play__parent {
+  width: 100%;
+  height: 100vh;
+  background: url("../images//uno-package//Table_0.png");
+  background-repeat: no-repeat;
+  background-size: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar-block__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: space-between;
+}
+.avatar-block__main .title {
+  color: yellow;
+  font-size: 17px;
+  font-weight: bolder;
+  text-transform: uppercase;
+}
+.avatar-block__main .name {
+  font-size: 20px;
+  font-weight: bolder;
+}
+
+.player-block__main {
+  width: 100%;
+  height: 25%;
+  position: absolute;
+  bottom: 0;
+  padding: 30px 10px;
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  font-weight: bolder;
+}
+.player-block__main .avatar-block {
+  width: 15%;
+}
+.player-block__main .card-block {
+  width: 70%;
+}
+.player-block__main .card-block .parent-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.player-block__main .card-block .parent-container:not(:first-child) {
+  margin-left: 7px;
+}
+.player-block__main .card-block .current-player-card-container {
+  display: flex;
+  gap: 10px;
+}
+.player-block__main .action-block {
+  width: 15%;
+}
+.player-block__main .action-block .actions__main {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+.player-block__main .action-block .actions__main button {
+  padding: 0 35px;
+}
+.player-block__main .action-block .actions__main button:not(:last-child) {
+  margin-bottom: 10px;
+}
+
+.non-player-block__main {
+  width: 100%;
+  height: 25%;
+  position: absolute;
+  top: 0;
+  padding: 30px 10px;
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  font-weight: bolder;
+}
+.non-player-block__main .non-next__block {
+  width: 40%;
+}
+.non-player-block__main .non-next__block .non-next__container {
+  padding: 0 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.non-player-block__main .non-next__block .non-next__container .title {
+  color: yellow;
+  font-size: 17px;
+  font-weight: bolder;
+  text-transform: uppercase;
+}
+.non-player-block__main .non-next__block .non-next__container .remaining-cards {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  gap: 5px;
+}
+.non-player-block__main .non-next__block .non-next__container .container {
+  display: flex;
+  gap: 20px;
+  margin-top: 15px;
+}
+.non-player-block__main .next__block {
+  width: 60%;
+}
+.non-player-block__main .next__block .container {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 100%;
+}
+.non-player-block__main .next__block .container .cards {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.non-player-block__main .next__block .container .cards .additional-cards-text {
+  font-size: 25px;
+  font-weight: bolder;
+}
+
+.gameplay-block__main {
+  position: absolute;
+  top: 25%;
+  height: 50%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 25px;
+  gap: 30px;
+}/*# sourceMappingURL=play.css.map */
