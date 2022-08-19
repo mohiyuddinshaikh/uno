@@ -5,9 +5,10 @@ import Card from "../components/card/Card";
 import { NUMBER_OF_CARDS_PER_PLAYER } from "../utils/constants";
 import { generateRandomNumber, shuffle } from "../utils/helpers";
 import BackgroundImage from "../assets/images/uno-package/Table_0.png";
-import { Button, Avatar, notification } from "antd";
+import { Button, Avatar, notification, Modal } from "antd";
 import "../assets/style/play.scss";
 import Deck from "../components/card/Deck";
+import { RightOutlined, LeftOutlined } from "@ant-design/icons";
 
 export default function Play() {
   const location = useLocation();
@@ -21,6 +22,8 @@ export default function Play() {
   const [flowOfGame, setFlowOfGame] = useState("right");
   // play states
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [wild, setWild] = useState(null);
+  const [showChooseColorModal, setShowChooseColorModal] = useState(false);
 
   // console.log("location", location);
   // console.log("initialPlayers", initialPlayers);
@@ -28,8 +31,18 @@ export default function Play() {
   console.log("players", players);
   console.log("currentPlayer", currentPlayer);
   console.log("playedCards", playedCards);
+  console.log("wild", wild);
 
   const DISPLAY_PICTURE_ALT = "https://joeschmoe.io/api/v1/0";
+  const COLORS = [
+    { name: "blue", code: "#0096FF" },
+    { name: "green", code: "#50C878" },
+    {
+      name: "red",
+      code: "#EE4B2B",
+    },
+    { name: "yellow", code: "#FFEA00" },
+  ];
 
   const illegalCardNotification = () => {
     notification.error({
@@ -47,6 +60,10 @@ export default function Play() {
       allotCardsToPlayers();
     }
   }, [initialPlayers]);
+
+  useEffect(() => {
+    disableWildCards();
+  }, [playedCards]);
 
   const handleSetPlayersFromLocation = () => {
     if (initialPlayers?.length) return;
@@ -126,14 +143,20 @@ export default function Play() {
     );
   };
 
-  const checkIfPlayerHasFinishedRecursively = (index, from) => {
+  const checkIfPlayerHasFinishedRecursively = (index) => {
     if (flowOfGame === "right") {
+      if (index > players.length - 1) {
+        return checkIfPlayerHasFinishedRecursively(0);
+      }
       if (!players[index].hasFinished) {
         return index;
       } else {
         return checkIfPlayerHasFinishedRecursively(index + 1);
       }
     } else if (flowOfGame === "left") {
+      if (index < 0) {
+        return checkIfPlayerHasFinishedRecursively(players.length - 1);
+      }
       if (!players[index].hasFinished) {
         return index;
       } else {
@@ -153,15 +176,17 @@ export default function Play() {
   };
 
   const handlePass = (params) => {
-    console.log("in here", currentPlayer);
     const updatedFlowOfGame = params?.updatedFlowOfGame;
+    const skip = params?.skip;
 
     let flow =
       typeof updatedFlowOfGame === "string" ? updatedFlowOfGame : flowOfGame;
 
     if (flow === "right") {
       if (currentPlayer === players.length - 1) {
-        let tempCurrentPlayer = checkIfPlayerHasFinishedRecursively(0);
+        let tempCurrentPlayer = checkIfPlayerHasFinishedRecursively(
+          !skip ? 0 : 0 + 1
+        );
         let tempNextPlayer = checkIfPlayerHasFinishedRecursively(
           tempCurrentPlayer === players.length - 1 ? 0 : tempCurrentPlayer + 1
         );
@@ -169,7 +194,7 @@ export default function Play() {
         setNextPlayer(tempNextPlayer);
       } else {
         let tempCurrentPlayer = checkIfPlayerHasFinishedRecursively(
-          currentPlayer + 1
+          !skip ? currentPlayer + 1 : currentPlayer + 1 + 1
         );
         let tempNextPlayer = checkIfPlayerHasFinishedRecursively(
           tempCurrentPlayer === players.length - 1 ? 0 : tempCurrentPlayer + 1
@@ -180,7 +205,7 @@ export default function Play() {
     } else if (flow === "left") {
       if (currentPlayer === 0) {
         let tempCurrentPlayer = checkIfPlayerHasFinishedRecursively(
-          players.length - 1
+          !skip ? players.length - 1 : players.length - 1 - 1
         );
         let tempNextPlayer = checkIfPlayerHasFinishedRecursively(
           tempCurrentPlayer === 0 ? players.length - 1 : tempCurrentPlayer - 1
@@ -188,9 +213,8 @@ export default function Play() {
         setCurrentPlayer(tempCurrentPlayer);
         setNextPlayer(tempNextPlayer);
       } else {
-        setCurrentPlayer((old) => old - 1);
         let tempCurrentPlayer = checkIfPlayerHasFinishedRecursively(
-          currentPlayer - 1
+          !skip ? currentPlayer - 1 : currentPlayer - 1 - 1
         );
         let tempNextPlayer = checkIfPlayerHasFinishedRecursively(
           tempCurrentPlayer === 0 ? players.length - 1 : tempCurrentPlayer - 1
@@ -199,7 +223,9 @@ export default function Play() {
         setNextPlayer(tempNextPlayer);
       }
     }
-    setHasDrawn(false);
+    if (hasDrawn) {
+      setHasDrawn(false);
+    }
   };
 
   const handlePlayCard = (playedCardIndex) => {
@@ -221,28 +247,38 @@ export default function Play() {
 
     switch (playedCard.subType) {
       case 1:
+        // numbered
         playNumberedCard(topCard, playedCard, tempPlayers, playedCardIndex);
         break;
       case 2:
-        playDrawTwoCard(topCard, playedCard, tempPlayers, playedCardIndex);
-        // skip left after draw
+        // draw 2
+        playDrawTwoCard(topCard, playedCard, tempPlayers, playedCardIndex, 2);
         break;
       case 3:
         // skip
-        playSkipCard();
+        playSkipCard(topCard, playedCard, tempPlayers, playedCardIndex);
         break;
       case 4:
+        // reverse
         playReverseCard(topCard, playedCard, tempPlayers, playedCardIndex);
         break;
       case 5:
         // draw 4
+        playDrawTwoCard(topCard, playedCard, tempPlayers, playedCardIndex, 4);
         break;
       case 6:
         // wild card
+        playWildCard(topCard, playedCard, tempPlayers, playedCardIndex, 4);
         break;
 
       default:
         break;
+    }
+  };
+
+  const disableWildCards = () => {
+    if (wild && playedCards[0].subType !== 5 && playedCards[0].subType !== 6) {
+      setWild(null);
     }
   };
 
@@ -252,7 +288,6 @@ export default function Play() {
     tempPlayedCards.unshift(playedCard);
     setPlayedCards([...tempPlayedCards]);
     setPlayers([...tempPlayers]);
-    setHasDrawn(false);
     handlePass();
   };
 
@@ -263,29 +298,89 @@ export default function Play() {
     playedCardIndex
   ) => {
     if (
-      playedCard.color !== topCard.color &&
-      playedCard.primaryTitle !== topCard.primaryTitle
+      playedCard.color === topCard.color ||
+      playedCard.primaryTitle === topCard.primaryTitle
     ) {
+      playOperation(tempPlayers, playedCardIndex, playedCard);
+    } else if (
+      (topCard.subType === 5 || topCard.subType === 6) &&
+      playedCard.color === wild
+    ) {
+      playOperation(tempPlayers, playedCardIndex, playedCard);
+    } else {
       illegalCardNotification();
       return;
     }
-    playOperation(tempPlayers, playedCardIndex, playedCard);
+  };
+
+  const showColorModal = () => {
+    setShowChooseColorModal(true);
+  };
+
+  const hideColorModal = () => {
+    setShowChooseColorModal(false);
+  };
+
+  const handleWildColorSelect = (item) => {
+    console.log("item", item);
+    switch (item.name) {
+      case "blue":
+        setWild(1);
+        break;
+      case "green":
+        setWild(2);
+        break;
+      case "red":
+        setWild(3);
+        break;
+      case "yellow":
+        setWild(4);
+        break;
+
+      default:
+        setWild(null);
+        break;
+    }
+    hideColorModal();
   };
 
   const playDrawTwoCard = (
     topCard,
     playedCard,
     tempPlayers,
-    playedCardIndex
+    playedCardIndex,
+    numberOfCards
   ) => {
-    if (topCard.color !== playedCard.color) {
+    console.log("topCard", topCard);
+    console.log("playedCard", playedCard);
+    let illegalCard = false;
+
+    if (
+      numberOfCards === 2 &&
+      topCard.subType !== 5 &&
+      topCard.subType !== 6 &&
+      topCard.subType !== 2 &&
+      topCard.color !== playedCard.color
+    ) {
+      illegalCard = true;
+    }
+
+    if (
+      numberOfCards === 2 &&
+      (topCard.subType === 5 || topCard.subType === 6) &&
+      playedCard.color !== wild
+    ) {
+      illegalCard = true;
+    }
+
+    if (illegalCard) {
       illegalCardNotification();
       return;
     }
 
     const tempDeckOfCards = [...deckOfCards];
-    const draw2Cards = tempDeckOfCards.slice(0, 2);
-    tempDeckOfCards.splice(0, 2);
+    const draw2Cards = tempDeckOfCards.slice(0, numberOfCards);
+    tempDeckOfCards.splice(0, numberOfCards);
     tempPlayers[nextPlayer].cards.unshift([...draw2Cards]);
     const playersWithFlattenedCards = [].concat.apply(
       [],
@@ -293,11 +388,35 @@ export default function Play() {
     );
     tempPlayers[nextPlayer].cards = [...playersWithFlattenedCards];
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+
+    const tempPlayedCards = [...playedCards];
+    tempPlayedCards.unshift(playedCard);
+
     setPlayers(tempPlayers);
     setDeckOfCards(tempDeckOfCards);
-    if (hasDrawn) {
-      setHasDrawn(false);
+    setPlayedCards(tempPlayedCards);
+
+    if (numberOfCards === 4) {
+      showColorModal();
     }
+
+    handlePass({ skip: true });
+  };
+
+  const playWildCard = (topCard, playedCard, tempPlayers, playedCardIndex) => {
+    const tempPlayedCards = [...playedCards];
+    tempPlayedCards.unshift(playedCard);
+    tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+
+    const tempDeckOfCards = [...deckOfCards];
+    tempDeckOfCards.splice(0, 1);
+
+    showColorModal();
+
+    setPlayedCards(tempPlayedCards);
+    setDeckOfCards(tempDeckOfCards);
+    setPlayers(tempPlayers);
+
     handlePass();
   };
 
@@ -307,7 +426,25 @@ export default function Play() {
     tempPlayers,
     playedCardIndex
   ) => {
-    if (topCard.color !== playedCard.color) {
+    let illegalCard = false;
+
+    if (
+      topCard.subType !== 5 &&
+      topCard.subType !== 6 &&
+      topCard.subType !== 4 &&
+      topCard.color !== playedCard.color
+    ) {
+      illegalCard = true;
+    }
+
+    if (
+      (topCard.subType === 5 || topCard.subType === 6) &&
+      playedCard.color !== wild
+    ) {
+      illegalCard = true;
+    }
+
+    if (illegalCard) {
       illegalCardNotification();
       return;
     }
@@ -322,17 +459,50 @@ export default function Play() {
       updatedFlowOfGame = "right";
     }
 
+    const tempPlayedCards = [...playedCards];
+    tempPlayedCards.unshift(playedCard);
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
 
-    handlePass({ updatedFlowOfGame });
+    const tempDeckOfCards = [...deckOfCards];
+    tempDeckOfCards.splice(0, 1);
 
-    if (hasDrawn) {
-      setHasDrawn(false);
-    }
+    setPlayedCards(tempPlayedCards);
+    setDeckOfCards(tempDeckOfCards);
+    setPlayers(tempPlayers);
+    handlePass({ updatedFlowOfGame });
   };
 
-  const playSkipCard = () => {
-    handlePass();
+  const playSkipCard = (topCard, playedCard, tempPlayers, playedCardIndex) => {
+    let illegalCard = false;
+
+    if (
+      topCard.subType !== 5 &&
+      topCard.subType !== 6 &&
+      topCard.subType !== 3 &&
+      topCard.color !== playedCard.color
+    ) {
+      illegalCard = true;
+    }
+
+    if (
+      (topCard.subType === 5 || topCard.subType === 6) &&
+      playedCard.color !== wild
+    ) {
+      illegalCard = true;
+    }
+
+    if (illegalCard) {
+      illegalCardNotification();
+      return;
+    }
+
+    const tempPlayedCards = [...playedCards];
+    tempPlayedCards.unshift(playedCard);
+    tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+
+    setPlayedCards(tempPlayedCards);
+    setPlayers(tempPlayers);
+    handlePass({ skip: true });
   };
 
   const NonNextPlayers = () => {
@@ -402,18 +572,38 @@ export default function Play() {
   const GameplayCardsBlock = () => {
     return (
       <div className="gameplay-block__main">
-        <Card card={playedCards.length && playedCards[0]} noRaise={true} />
+        <div className="played-card-container">
+          {wild ? (
+            <>
+              <div
+                className="color-block"
+                style={{ backgroundColor: COLORS[wild + 1]?.code || "gray" }}
+              ></div>
+              <Card
+                card={playedCards.length && playedCards[0]}
+                noRaise={true}
+              />
+              <div
+                className="color-block"
+                style={{ backgroundColor: COLORS[wild + 1]?.code || "gray" }}
+              ></div>
+            </>
+          ) : (
+            <Card card={playedCards.length && playedCards[0]} noRaise={true} />
+          )}
+        </div>
         <Deck />
       </div>
     );
   };
 
-  const PlayerAvatarBlock = ({ title, image, name }) => {
+  const PlayerAvatarBlock = ({ title, image, name, count }) => {
     return (
       <div className="avatar-block__main">
         <div className="title">{title}</div>
         <Avatar size={70} src={image} alt={DISPLAY_PICTURE_ALT} />
         <div className="name">{name}</div>
+        {count}
       </div>
     );
   };
@@ -459,10 +649,13 @@ export default function Play() {
             title={"Now Playing :"}
             image={players?.length && players[currentPlayer].displayPicture}
             name={players?.length && players[currentPlayer].name}
+            count={players?.length && players[currentPlayer].cards.length}
           />
         </div>
         <div className="card-block">
+          <LeftOutlined />
           <PlayerCards />
+          <RightOutlined />
         </div>
         <div className="action-block">
           <PlayerActions />
@@ -476,6 +669,27 @@ export default function Play() {
       <NonPlayerBlock />
       <GameplayCardsBlock />
       <PlayerBlock />
+      <Modal
+        title="Choose Color"
+        visible={showChooseColorModal}
+        footer={null}
+        closable={false}
+      >
+        <div className="circle-container">
+          {COLORS.map((item, index) => {
+            return (
+              <div
+                className="circle"
+                style={{
+                  backgroundColor: item?.code,
+                }}
+                key={index}
+                onClick={() => handleWildColorSelect(item)}
+              ></div>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 }
