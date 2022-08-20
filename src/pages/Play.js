@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cards } from "../assets/cards/packOfCards";
 import Card from "../components/card/Card";
 import { NUMBER_OF_CARDS_PER_PLAYER } from "../utils/constants";
@@ -8,10 +8,16 @@ import BackgroundImage from "../assets/images/uno-package/Table_0.png";
 import { Button, Avatar, notification, Modal } from "antd";
 import "../assets/style/play.scss";
 import Deck from "../components/card/Deck";
-import { RightOutlined, LeftOutlined } from "@ant-design/icons";
+import {
+  RightOutlined,
+  LeftOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 
 export default function Play() {
   const location = useLocation();
+  const navigate = useNavigate();
+  let scrollRef = useRef(null);
 
   const [initialPlayers, setInitialPlayers] = useState(null);
   const [deckOfCards, setDeckOfCards] = useState(cards);
@@ -24,24 +30,26 @@ export default function Play() {
   const [hasDrawn, setHasDrawn] = useState(false);
   const [wild, setWild] = useState(null);
   const [showChooseColorModal, setShowChooseColorModal] = useState(false);
+  const [isGameFinished, setIsGameFinished] = useState(false);
+  //
 
   // console.log("location", location);
   // console.log("initialPlayers", initialPlayers);
   console.log("deckOfCards", deckOfCards);
   console.log("players", players);
   console.log("currentPlayer", currentPlayer);
-  console.log("playedCards", playedCards);
-  console.log("wild", wild);
+  console.log("playedCards.length", playedCards.length);
 
   const DISPLAY_PICTURE_ALT = "https://joeschmoe.io/api/v1/0";
   const COLORS = [
-    { name: "blue", code: "#0096FF" },
-    { name: "green", code: "#50C878" },
+    { name: "blue", code: "#0096FF", id: 1 },
+    { name: "green", code: "#50C878", id: 2 },
     {
       name: "red",
       code: "#EE4B2B",
+      id: 3,
     },
-    { name: "yellow", code: "#FFEA00" },
+    { name: "yellow", code: "#FFEA00", id: 4 },
   ];
 
   const illegalCardNotification = () => {
@@ -62,21 +70,41 @@ export default function Play() {
   }, [initialPlayers]);
 
   useEffect(() => {
-    disableWildCards();
+    postCardPlayedOperations();
   }, [playedCards]);
+
+  const scrollCards = (shift) => {
+    scrollRef.current.scrollLeft += shift;
+  };
+
+  const postCardPlayedOperations = () => {
+    // disable wild cards
+    disableWildCards();
+    // is game finised
+    const hasAllFinished =
+      players && players.filter((player) => player.hasFinished === false);
+    if (hasAllFinished?.length === 1) {
+      setIsGameFinished(true);
+    }
+    // is deck of cards empty
+    if (deckOfCards?.length === 0) {
+      const tempPlayedCards = [...playedCards];
+      const firstPlayedCard = tempPlayedCards.splice(0, 1);
+
+      setPlayedCards(firstPlayedCard);
+      setDeckOfCards([...tempPlayedCards]);
+    }
+  };
 
   const handleSetPlayersFromLocation = () => {
     if (initialPlayers?.length) return;
     setInitialPlayers(location?.state?.players);
   };
 
-  const generateRandomCards = () => {
+  const generateRandomCards = (numberOfCards, maxNumberLimit) => {
     let cardIndices = [];
-    while (
-      cardIndices?.length <
-      initialPlayers?.length * NUMBER_OF_CARDS_PER_PLAYER
-    ) {
-      const randomIndex = generateRandomNumber(0, deckOfCards?.length - 1);
+    while (cardIndices?.length < numberOfCards) {
+      const randomIndex = generateRandomNumber(0, maxNumberLimit);
       if (!cardIndices.includes(randomIndex)) {
         cardIndices.push(randomIndex);
       }
@@ -110,7 +138,14 @@ export default function Play() {
      * 4. remove the players cards indices from original deck of cards
      */
     // 1
-    const allPlayerCards = generateRandomCards();
+    const allPlayerCards = generateRandomCards(
+      initialPlayers?.length * NUMBER_OF_CARDS_PER_PLAYER,
+      deckOfCards?.length - 1
+    );
+    console.log("allPlayerCards", allPlayerCards);
+    console.log("allPlayerCards.length", allPlayerCards.length);
+    // 5
+
     // 2
     const tempPlayers = [...initialPlayers];
     tempPlayers.forEach((player, playerIndex) => {
@@ -127,11 +162,24 @@ export default function Play() {
     // 4
     removePlayerCardsFromDeck(playersWithFinalCards.tempDeckOfCards);
     setPlayers(playersWithFinalCards?.players);
+    allotFirstPlayedCard(playersWithFinalCards.tempDeckOfCards);
+  };
+
+  const allotFirstPlayedCard = (tempDeckOfCards) => {
+    const playedCard = [];
+    const filteredDeckOfCards = tempDeckOfCards.filter((item) => item !== null);
+
+    const card = generateRandomCards(1, filteredDeckOfCards?.length - 1);
+    playedCard.push(filteredDeckOfCards[card]);
+    filteredDeckOfCards.splice(card, 1);
+
+    setPlayedCards(playedCard);
+    setDeckOfCards(filteredDeckOfCards);
   };
 
   const ShowCurrentPlayerCards = () => {
     return (
-      <div className="current-player-card-container">
+      <div className="current-player-card-container" ref={scrollRef}>
         {players[currentPlayer].cards.map((card, index) => {
           return (
             <div onClick={() => handlePlayCard(index)}>
@@ -284,6 +332,9 @@ export default function Play() {
 
   const playOperation = (tempPlayers, playedCardIndex, playedCard) => {
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+    if (!tempPlayers[currentPlayer].cards.length) {
+      tempPlayers[currentPlayer].hasFinished = true;
+    }
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
     setPlayedCards([...tempPlayedCards]);
@@ -388,6 +439,9 @@ export default function Play() {
     );
     tempPlayers[nextPlayer].cards = [...playersWithFlattenedCards];
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+    if (!tempPlayers[currentPlayer].cards.length) {
+      tempPlayers[currentPlayer].hasFinished = true;
+    }
 
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
@@ -407,6 +461,9 @@ export default function Play() {
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+    if (!tempPlayers[currentPlayer].cards.length) {
+      tempPlayers[currentPlayer].hasFinished = true;
+    }
 
     const tempDeckOfCards = [...deckOfCards];
     tempDeckOfCards.splice(0, 1);
@@ -462,6 +519,9 @@ export default function Play() {
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+    if (!tempPlayers[currentPlayer].cards.length) {
+      tempPlayers[currentPlayer].hasFinished = true;
+    }
 
     const tempDeckOfCards = [...deckOfCards];
     tempDeckOfCards.splice(0, 1);
@@ -499,6 +559,9 @@ export default function Play() {
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
     tempPlayers[currentPlayer].cards.splice(playedCardIndex, 1);
+    if (!tempPlayers[currentPlayer].cards.length) {
+      tempPlayers[currentPlayer].hasFinished = true;
+    }
 
     setPlayedCards(tempPlayedCards);
     setPlayers(tempPlayers);
@@ -534,23 +597,27 @@ export default function Play() {
       <div className="container">
         <div className="player-info">
           <PlayerAvatarBlock
+            type={2}
             title={"Next Player :"}
             image={players?.length && players[nextPlayer].displayPicture}
             name={players?.length && players[nextPlayer].name}
+            count={players?.length && players[nextPlayer].cards.length}
           />
         </div>
-        <div className="cards">
-          {players?.length &&
-            players[nextPlayer].cards.map((item, index) => {
-              return index <= MAXIMUM_CARDS_TO_SHOW - 1 ? <Deck /> : null;
-            })}
-          {players?.length &&
-          players[nextPlayer]?.cards?.length > MAXIMUM_CARDS_TO_SHOW ? (
-            <div className="additional-cards-text">
-              +{players[nextPlayer]?.cards?.length - MAXIMUM_CARDS_TO_SHOW}
-            </div>
-          ) : null}
-        </div>
+        {currentPlayer !== nextPlayer ? (
+          <div className="cards">
+            {players?.length &&
+              players[nextPlayer].cards.map((item, index) => {
+                return index <= MAXIMUM_CARDS_TO_SHOW - 1 ? <Deck /> : null;
+              })}
+            {players?.length &&
+            players[nextPlayer]?.cards?.length > MAXIMUM_CARDS_TO_SHOW ? (
+              <div className="additional-cards-text">
+                +{players[nextPlayer]?.cards?.length - MAXIMUM_CARDS_TO_SHOW}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div></div>
       </div>
     );
@@ -569,24 +636,28 @@ export default function Play() {
     );
   };
 
+  const WildColorStroke = () => {
+    const color = COLORS.find((item) => item.id === wild);
+    return (
+      <div
+        className="color-block"
+        style={{ backgroundColor: color?.code || "gray" }}
+      ></div>
+    );
+  };
+
   const GameplayCardsBlock = () => {
     return (
       <div className="gameplay-block__main">
         <div className="played-card-container">
           {wild ? (
             <>
-              <div
-                className="color-block"
-                style={{ backgroundColor: COLORS[wild + 1]?.code || "gray" }}
-              ></div>
+              <WildColorStroke />
               <Card
                 card={playedCards.length && playedCards[0]}
                 noRaise={true}
               />
-              <div
-                className="color-block"
-                style={{ backgroundColor: COLORS[wild + 1]?.code || "gray" }}
-              ></div>
+              <WildColorStroke />
             </>
           ) : (
             <Card card={playedCards.length && playedCards[0]} noRaise={true} />
@@ -597,13 +668,19 @@ export default function Play() {
     );
   };
 
-  const PlayerAvatarBlock = ({ title, image, name, count }) => {
+  const PlayerAvatarBlock = ({ title, image, name, count, type }) => {
     return (
       <div className="avatar-block__main">
         <div className="title">{title}</div>
-        <Avatar size={70} src={image} alt={DISPLAY_PICTURE_ALT} />
-        <div className="name">{name}</div>
-        {count}
+        {type === 2 && currentPlayer === nextPlayer ? (
+          "NONE"
+        ) : (
+          <>
+            <Avatar size={70} src={image} alt={DISPLAY_PICTURE_ALT} />
+            <div className="name">{name}</div>
+            <div className="card-left">Cards Left : {count}</div>
+          </>
+        )}
       </div>
     );
   };
@@ -646,6 +723,7 @@ export default function Play() {
       <div className="player-block__main">
         <div className="avatar-block">
           <PlayerAvatarBlock
+            type={1}
             title={"Now Playing :"}
             image={players?.length && players[currentPlayer].displayPicture}
             name={players?.length && players[currentPlayer].name}
@@ -653,9 +731,9 @@ export default function Play() {
           />
         </div>
         <div className="card-block">
-          <LeftOutlined />
+          <LeftOutlined onClick={() => scrollCards(-200)} />
           <PlayerCards />
-          <RightOutlined />
+          <RightOutlined onClick={() => scrollCards(+200)} />
         </div>
         <div className="action-block">
           <PlayerActions />
@@ -664,7 +742,22 @@ export default function Play() {
     );
   };
 
-  return (
+  const finishGame = () => {
+    navigate("/");
+  };
+
+  const Loading = () => {
+    return (
+      <div className="loading-container">
+        <LoadingOutlined style={{ fontSize: "40px", color: "white" }} />
+        <div className="text"> Setting Up Your Game... </div>
+      </div>
+    );
+  };
+
+  return !players && !playedCards.length ? (
+    <Loading />
+  ) : (
     <div className="play__parent">
       <NonPlayerBlock />
       <GameplayCardsBlock />
@@ -688,6 +781,20 @@ export default function Play() {
               ></div>
             );
           })}
+        </div>
+      </Modal>
+      <Modal
+        title="Game Complete"
+        centered
+        visible={isGameFinished}
+        footer={null}
+        closable={false}
+      >
+        <div className="game-done-container">
+          <div className="title">Player {currentPlayer + 1} Loses !!!</div>
+          <Button size="large" onClick={finishGame} type="primary">
+            Finish
+          </Button>
         </div>
       </Modal>
     </div>

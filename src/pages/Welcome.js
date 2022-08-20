@@ -5,6 +5,8 @@ import "../assets/style/welcome.scss";
 import { Input, Button, notification } from "antd";
 import { RightOutlined } from "@ant-design/icons";
 import { generateDiceBearBottts } from "../utils/helpers";
+import Draw4 from "../assets/images/uno-package/Wild_Draw.png";
+import Wild from "../assets/images/uno-package/Wild.png";
 
 export default function Welcome() {
   const navigate = useNavigate();
@@ -81,10 +83,22 @@ export default function Welcome() {
 
   return (
     <div className="main-container">
-      <Header />
+      {/* <Header /> */}
       <div className="welcome-main">
+        <div className="tilt">
+          <img style={{ height: "150px", width: "110px" }} src={Wild} />
+        </div>
+        <div className="tilt-2">
+          <img style={{ height: "150px", width: "110px" }} src={Draw4} />
+        </div>
+        <div className="tilt-3">
+          <img style={{ height: "150px", width: "110px" }} src={Draw4} />
+        </div>
+        <div className="tilt-4">
+          <img style={{ height: "150px", width: "110px" }} src={Wild} />
+        </div>
         <div className="title">UNO</div>
-        <div className="subtitle">Let's Play!</div>
+        {/* <div className="subtitle">Let's Play!</div> */}
         <div className="initial-info-form">
           <Input
             placeholder="Enter number of players"
@@ -93,8 +107,9 @@ export default function Welcome() {
             onChange={(e) => setNumberOfPlayers(e.target.value)}
           />
           <Button
+            className="confirm-btn"
             type="primary"
-            shape="round"
+            // shape="round"
             size={"large"}
             onClick={handleNumberOfPlayers}
           >
@@ -119,13 +134,14 @@ export default function Welcome() {
           : null}
         {players?.length ? (
           <Button
+            className="play-btn"
             style={{ width: "30%", margin: "15px 0" }}
             type="primary"
-            shape="round"
+            // shape="round"
             size={"large"}
             onClick={handlePlay}
           >
-            Play <RightOutlined />
+            Play
           </Button>
         ) : null}
       </div>
