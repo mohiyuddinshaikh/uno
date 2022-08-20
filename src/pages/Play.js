@@ -4,7 +4,6 @@ import { cards } from "../assets/cards/packOfCards";
 import Card from "../components/card/Card";
 import { NUMBER_OF_CARDS_PER_PLAYER } from "../utils/constants";
 import { generateRandomNumber, shuffle } from "../utils/helpers";
-import BackgroundImage from "../assets/images/uno-package/Table_0.png";
 import { Button, Avatar, notification, Modal } from "antd";
 import "../assets/style/play.scss";
 import Deck from "../components/card/Deck";
@@ -12,6 +11,7 @@ import {
   RightOutlined,
   LeftOutlined,
   LoadingOutlined,
+  PoweroffOutlined,
 } from "@ant-design/icons";
 
 export default function Play() {
@@ -26,6 +26,7 @@ export default function Play() {
   const [currentPlayer, setCurrentPlayer] = useState(0);
   const [nextPlayer, setNextPlayer] = useState(1);
   const [flowOfGame, setFlowOfGame] = useState("right");
+  const [showQuitGame, setShowQuitGame] = useState(false);
   // play states
   const [hasDrawn, setHasDrawn] = useState(false);
   const [wild, setWild] = useState(null);
@@ -35,10 +36,10 @@ export default function Play() {
 
   // console.log("location", location);
   // console.log("initialPlayers", initialPlayers);
-  console.log("deckOfCards", deckOfCards);
-  console.log("players", players);
-  console.log("currentPlayer", currentPlayer);
-  console.log("playedCards.length", playedCards.length);
+  // console.log("deckOfCards", deckOfCards);
+  // console.log("players", players);
+  // console.log("currentPlayer", currentPlayer);
+  // console.log("playedCards", playedCards);
 
   const DISPLAY_PICTURE_ALT = "https://joeschmoe.io/api/v1/0";
   const COLORS = [
@@ -142,8 +143,6 @@ export default function Play() {
       initialPlayers?.length * NUMBER_OF_CARDS_PER_PLAYER,
       deckOfCards?.length - 1
     );
-    console.log("allPlayerCards", allPlayerCards);
-    console.log("allPlayerCards.length", allPlayerCards.length);
     // 5
 
     // 2
@@ -172,9 +171,10 @@ export default function Play() {
     const card = generateRandomCards(1, filteredDeckOfCards?.length - 1);
     playedCard.push(filteredDeckOfCards[card]);
     filteredDeckOfCards.splice(card, 1);
+    const shuffledDeck = shuffle(filteredDeckOfCards);
 
     setPlayedCards(playedCard);
-    setDeckOfCards(filteredDeckOfCards);
+    setDeckOfCards([...shuffledDeck]);
   };
 
   const ShowCurrentPlayerCards = () => {
@@ -221,6 +221,22 @@ export default function Play() {
     tempDeck.splice(0, 1);
     setHasDrawn(true);
     setDeckOfCards([...tempDeck]);
+  };
+
+  const checkIfUnoOrFinish = (cardsLength, name) => {
+    if (cardsLength === 0) {
+      notification.success({
+        message: "VICTORY",
+        description: `${name} has WON !!`,
+        duration: 5,
+      });
+    } else if (cardsLength === 1) {
+      notification.info({
+        message: "UNO",
+        description: `${name} says: UNO !!`,
+        duration: 5,
+      });
+    }
   };
 
   const handlePass = (params) => {
@@ -337,6 +353,12 @@ export default function Play() {
     }
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
+
+    checkIfUnoOrFinish(
+      tempPlayers[currentPlayer]?.cards?.length,
+      tempPlayers[currentPlayer]?.name
+    );
+
     setPlayedCards([...tempPlayedCards]);
     setPlayers([...tempPlayers]);
     handlePass();
@@ -373,7 +395,6 @@ export default function Play() {
   };
 
   const handleWildColorSelect = (item) => {
-    console.log("item", item);
     switch (item.name) {
       case "blue":
         setWild(1);
@@ -402,8 +423,6 @@ export default function Play() {
     playedCardIndex,
     numberOfCards
   ) => {
-    console.log("topCard", topCard);
-    console.log("playedCard", playedCard);
     let illegalCard = false;
 
     if (
@@ -446,6 +465,11 @@ export default function Play() {
     const tempPlayedCards = [...playedCards];
     tempPlayedCards.unshift(playedCard);
 
+    checkIfUnoOrFinish(
+      tempPlayers[currentPlayer]?.cards?.length,
+      tempPlayers[currentPlayer]?.name
+    );
+
     setPlayers(tempPlayers);
     setDeckOfCards(tempDeckOfCards);
     setPlayedCards(tempPlayedCards);
@@ -469,6 +493,11 @@ export default function Play() {
     tempDeckOfCards.splice(0, 1);
 
     showColorModal();
+
+    checkIfUnoOrFinish(
+      tempPlayers[currentPlayer]?.cards?.length,
+      tempPlayers[currentPlayer]?.name
+    );
 
     setPlayedCards(tempPlayedCards);
     setDeckOfCards(tempDeckOfCards);
@@ -526,10 +555,23 @@ export default function Play() {
     const tempDeckOfCards = [...deckOfCards];
     tempDeckOfCards.splice(0, 1);
 
+    checkIfUnoOrFinish(
+      tempPlayers[currentPlayer]?.cards?.length,
+      tempPlayers[currentPlayer]?.name
+    );
+
     setPlayedCards(tempPlayedCards);
     setDeckOfCards(tempDeckOfCards);
     setPlayers(tempPlayers);
-    handlePass({ updatedFlowOfGame });
+
+    const numberOfUnFinishedPlayers = tempPlayers.filter(
+      (player) => player.hasFinished === false
+    );
+    if (numberOfUnFinishedPlayers.length === 2) {
+      handlePass({ updatedFlowOfGame, skip: true });
+    } else {
+      handlePass({ updatedFlowOfGame });
+    }
   };
 
   const playSkipCard = (topCard, playedCard, tempPlayers, playedCardIndex) => {
@@ -562,6 +604,11 @@ export default function Play() {
     if (!tempPlayers[currentPlayer].cards.length) {
       tempPlayers[currentPlayer].hasFinished = true;
     }
+
+    checkIfUnoOrFinish(
+      tempPlayers[currentPlayer]?.cards?.length,
+      tempPlayers[currentPlayer]?.name
+    );
 
     setPlayedCards(tempPlayedCards);
     setPlayers(tempPlayers);
@@ -646,24 +693,45 @@ export default function Play() {
     );
   };
 
+  const handleQuit = () => {
+    navigate("/");
+  };
+
   const GameplayCardsBlock = () => {
     return (
       <div className="gameplay-block__main">
-        <div className="played-card-container">
-          {wild ? (
-            <>
-              <WildColorStroke />
+        <div></div>
+        <div className="card-container">
+          <div className="played-card-container">
+            {wild ? (
+              <>
+                <WildColorStroke />
+                <Card
+                  card={playedCards.length && playedCards[0]}
+                  noRaise={true}
+                />
+                <WildColorStroke />
+              </>
+            ) : (
               <Card
                 card={playedCards.length && playedCards[0]}
                 noRaise={true}
               />
-              <WildColorStroke />
-            </>
-          ) : (
-            <Card card={playedCards.length && playedCards[0]} noRaise={true} />
-          )}
+            )}
+          </div>
+          <Deck />
         </div>
-        <Deck />
+        <div>
+          <Button
+            className="quit-btn"
+            type="primary"
+            shape="round"
+            size={"large"}
+            onClick={() => setShowQuitGame(true)}
+          >
+            <PoweroffOutlined />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -755,48 +823,65 @@ export default function Play() {
     );
   };
 
-  return !players && !playedCards.length ? (
-    <Loading />
-  ) : (
+  return (
     <div className="play__parent">
-      <NonPlayerBlock />
-      <GameplayCardsBlock />
-      <PlayerBlock />
-      <Modal
-        title="Choose Color"
-        visible={showChooseColorModal}
-        footer={null}
-        closable={false}
-      >
-        <div className="circle-container">
-          {COLORS.map((item, index) => {
-            return (
-              <div
-                className="circle"
-                style={{
-                  backgroundColor: item?.code,
-                }}
-                key={index}
-                onClick={() => handleWildColorSelect(item)}
-              ></div>
-            );
-          })}
-        </div>
-      </Modal>
-      <Modal
-        title="Game Complete"
-        centered
-        visible={isGameFinished}
-        footer={null}
-        closable={false}
-      >
-        <div className="game-done-container">
-          <div className="title">Player {currentPlayer + 1} Loses !!!</div>
-          <Button size="large" onClick={finishGame} type="primary">
-            Finish
-          </Button>
-        </div>
-      </Modal>
+      {!players && !playedCards.length ? (
+        <Loading />
+      ) : (
+        <>
+          <NonPlayerBlock />
+          <GameplayCardsBlock />
+          <PlayerBlock />
+          <Modal
+            title="Choose Color"
+            visible={showChooseColorModal}
+            footer={null}
+            closable={false}
+          >
+            <div className="circle-container">
+              {COLORS.map((item, index) => {
+                return (
+                  <div
+                    className="circle"
+                    style={{
+                      backgroundColor: item?.code,
+                    }}
+                    key={index}
+                    onClick={() => handleWildColorSelect(item)}
+                  ></div>
+                );
+              })}
+            </div>
+          </Modal>
+          <Modal
+            title="Game Complete"
+            centered
+            visible={isGameFinished}
+            footer={null}
+            closable={false}
+          >
+            <div className="game-done-container">
+              <div className="title">
+                {players[currentPlayer].name} Loses !!!
+              </div>
+              <Button size="large" onClick={finishGame} type="primary">
+                Finish
+              </Button>
+            </div>
+          </Modal>
+          <Modal
+            title="Quit Game"
+            visible={showQuitGame}
+            onOk={handleQuit}
+            onCancel={() => setShowQuitGame(false)}
+            centered
+            okText="Yes"
+            cancelText="No"
+          >
+            <p>Are you sure you want to quit game?</p>
+          </Modal>
+        </>
+      )}
     </div>
   );
 }

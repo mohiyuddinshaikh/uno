@@ -1,3 +1,13 @@
+body {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+  scroll-behavior: smooth;
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
 .main-container {
   min-height: 100vh;
   width: 100vw;
@@ -54,28 +64,28 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .tilt {
   transform: rotate(-15deg);
-  position: absolute;
+  position: fixed;
   top: 70px;
   left: 100px;
 }
 
 .tilt-2 {
   transform: rotate(10deg);
-  position: absolute;
+  position: fixed;
   top: 70px;
   left: 190px;
 }
 
 .tilt-3 {
   transform: rotate(15deg);
-  position: absolute;
+  position: fixed;
   top: 70px;
   right: 100px;
 }
 
 .tilt-4 {
   transform: rotate(-10deg);
-  position: absolute;
+  position: fixed;
   top: 70px;
   right: 190px;
 }

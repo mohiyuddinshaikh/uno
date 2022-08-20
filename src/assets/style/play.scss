@@ -1,3 +1,13 @@
+body {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+  scroll-behavior: smooth;
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
 button {
   cursor: pointer;
 }
@@ -197,11 +207,15 @@ button {
   height: 50%;
   width: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  //   background-color: lightblue;
   padding: 0 25px;
   gap: 30px;
+
+  .card-container {
+    display: flex;
+    gap: 15px;
+  }
 }
 
 .game-done-container {
@@ -235,4 +249,25 @@ button {
     color: white;
     font-size: bolder;
   }
+}
+
+.quit-btn {
+  background-color: red;
+  // border: 2px solid yellow;
+  border: none;
+  cursor: pointer;
+}
+
+.quit-btn:hover {
+  background-color: red;
+  // border: 2px solid yellow;
+  border: none;
+  cursor: pointer;
+}
+
+.quit-btn:focus {
+  background-color: red;
+  // border: 2px solid yellow;
+  border: none;
+  cursor: pointer;
 }
